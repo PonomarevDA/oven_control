@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <project xmlns:ns1="http://www.plcopen.org/xml/tc6_0201" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns="http://www.plcopen.org/xml/tc6_0201">
   <fileHeader companyName="Неизвестно" productName="Unnamed" productVersion="1" creationDateTime="2019-12-05T21:38:19"/>
-  <contentHeader name="Unnamed" modificationDateTime="2019-12-09T00:45:36">
+  <contentHeader name="Unnamed" modificationDateTime="2019-12-09T01:37:56">
     <coordinateInfo>
       <fbd>
         <scaling x="0" y="0"/>
@@ -131,23 +131,7 @@
         <body>
           <ST>
             <xhtml:p><![CDATA[GlobalVar1 := GlobalVar1 + 1;
-
-(* Get power button status 
-getSourceValue(true,'HMIFrame.power_btn.GetValue()',ack,str);
-is_source_turned_on := STRING_TO_BOOL(str);*)
-
-(*
-( Set currents values)
-cmd := REAL_TO_STRING(first_current);
-cmd := CONCAT('HMIFrame.text_first_current.SetValue("', cmd);
-cmd := CONCAT(cmd, ' A")');
-setFirstCurrent(true,cmd,ack1,str);
-
-cmd := REAL_TO_STRING(second_current);
-cmd := CONCAT('HMIFrame.text_second_current.SetValue("', cmd);
-cmd := CONCAT(cmd, ' A")');
-setSecondCurrent(true,cmd,ack1,str);
-*)]]></xhtml:p>
+]]></xhtml:p>
           </ST>
         </body>
       </pou>

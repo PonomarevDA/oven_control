@@ -23,23 +23,26 @@ class CustomWidget(wx.StaticText):
         super(CustomWidget, self).__init__(*args, **kwargs)
         self.Message = None
 
+is_source_turned_on = False
 def power_btn_handler(event):
+    global is_source_turned_on
     print(event)
     print(HMIFrame)
     HMIFrame.power_btn.SetLabel("This is power!!!")
+    is_source_turned_on = not is_source_turned_on
+    setattr(PLCGlobals,"is_source_turned_on", is_source_turned_on)
     
 counter = 0
 def OnTimer(self, event):
     global counter
     HMIFrame.power_btn.SetLabel(str(counter))
     counter += 1
-    #text = str(getattr(PLCGlobals,"first_current"))
-    #HMIFrame.text_first_current.SetValue(text)
 
-    #text = str(getattr(PLCGlobals,"second_current"))
-    #HMIFrame.text_second_current.SetValue(text)
+    text = str(getattr(PLCGlobals,"first_current")) + " A"
+    HMIFrame.text_first_current.SetValue(text)
 
-    #setattr(PLCGlobals,"is_source_turned_on", true)
+    text = str(getattr(PLCGlobals,"second_current")) + " A"
+    HMIFrame.text_second_current.SetValue(text)
 
 InitBaseHMI = Class_HMIFrame.__init__
 Class_HMIFrame.OnTimer = OnTimer
@@ -56,7 +59,7 @@ def InitHMI(self,*args,**kargs):
     self.timer = wx.Timer(self, TIMER_ID)
     self.Bind(wx.EVT_TIMER, self.OnTimer, self.timer)
     try:
-        self.timer.Start(200)
+        self.timer.Start(100)
     except:
         print('There is some bug where it is trying to start timer.')
 
