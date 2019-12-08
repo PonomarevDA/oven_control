@@ -4,6 +4,7 @@
     <variable name="LocalVar0" type="DINT" initial="10"/>
     <variable name="GlobalVar1" type="DINT" initial="10"/>
     <variable name="is_system_turned_on" type="BOOL" initial="0"/>
+    <variable name="is_source_turned_on" type="BOOL" initial="0"/>
     <variable name="first_temperature" type="REAL" initial="0"/>
     <variable name="second_temperature" type="REAL" initial="0"/>
     <variable name="first_current" type="REAL" initial="0"/>
@@ -14,25 +15,53 @@
 import ctypes
 import wx, sys
 
+TIMER_ID = 99
+
 class CustomWidget(wx.StaticText):
     def __init__(self, *args, **kwargs):
         self.initialized = False
         super(CustomWidget, self).__init__(*args, **kwargs)
         self.Message = None
 
+def power_btn_handler(event):
+    print(event)
+    print(HMIFrame)
+    HMIFrame.power_btn.SetLabel("This is power!!!")
+    
+counter = 0
+def OnTimer(self, event):
+    global counter
+    HMIFrame.power_btn.SetLabel(str(counter))
+    counter += 1
+    #text = str(getattr(PLCGlobals,"first_current"))
+    #HMIFrame.text_first_current.SetValue(text)
+
+    #text = str(getattr(PLCGlobals,"second_current"))
+    #HMIFrame.text_second_current.SetValue(text)
+
+    #setattr(PLCGlobals,"is_source_turned_on", true)
+
 InitBaseHMI = Class_HMIFrame.__init__
+Class_HMIFrame.OnTimer = OnTimer
 def InitHMI(self,*args,**kargs):
     InitBaseHMI(self, *args,**kargs)
     print('Initialisation changed!')
+    self.SetSize((200, 200))
+    self.SetTitle("Nex HMI")
+
+    print('\Init button:')
+    self.Bind(wx.EVT_CHECKBOX, power_btn_handler, self.power_btn)
+
+    print('\Init timer:')
+    self.timer = wx.Timer(self, TIMER_ID)
+    self.Bind(wx.EVT_TIMER, self.OnTimer, self.timer)
     try:
-        self.SetSize((200, 200))
-        self.SetTitle("Nex HMI")
-        print(self.power_btn)
-        print(':)')
+        self.timer.Start(200)
     except:
-        print(':(')
+        print('There is some bug where it is trying to start timer.')
 
 Class_HMIFrame.__init__ = InitHMI
+
 ]]></xhtml:p>
   </globals>
   <init>
