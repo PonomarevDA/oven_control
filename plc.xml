@@ -1,0 +1,255 @@
+<?xml version='1.0' encoding='utf-8'?>
+<project xmlns:ns1="http://www.plcopen.org/xml/tc6_0201" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns="http://www.plcopen.org/xml/tc6_0201">
+  <fileHeader companyName="Неизвестно" productName="Unnamed" productVersion="1" creationDateTime="2019-12-05T21:38:19"/>
+  <contentHeader name="Unnamed" modificationDateTime="2019-12-08T22:24:07">
+    <coordinateInfo>
+      <fbd>
+        <scaling x="0" y="0"/>
+      </fbd>
+      <ld>
+        <scaling x="0" y="0"/>
+      </ld>
+      <sfc>
+        <scaling x="0" y="0"/>
+      </sfc>
+    </coordinateInfo>
+  </contentHeader>
+  <types>
+    <dataTypes/>
+    <pous>
+      <pou name="hmiUpdater" pouType="program">
+        <interface>
+          <localVars>
+            <variable name="LocalVar0">
+              <type>
+                <DINT/>
+              </type>
+            </variable>
+            <variable name="getSourceValue">
+              <type>
+                <derived name="python_poll"/>
+              </type>
+            </variable>
+            <variable name="getSystemMode">
+              <type>
+                <derived name="python_poll"/>
+              </type>
+            </variable>
+            <variable name="setFirstCurrent">
+              <type>
+                <derived name="python_poll"/>
+              </type>
+            </variable>
+            <variable name="setSecondCurrent">
+              <type>
+                <derived name="python_poll"/>
+              </type>
+            </variable>
+          </localVars>
+          <externalVars>
+            <variable name="GlobalVar1">
+              <type>
+                <DINT/>
+              </type>
+            </variable>
+          </externalVars>
+          <localVars>
+            <variable name="getCheckBoxState">
+              <type>
+                <derived name="python_poll"/>
+              </type>
+            </variable>
+            <variable name="getSpinCtrl">
+              <type>
+                <derived name="python_poll"/>
+              </type>
+            </variable>
+            <variable name="setSpinCtrl">
+              <type>
+                <derived name="python_poll"/>
+              </type>
+            </variable>
+            <variable name="getPower">
+              <type>
+                <DINT/>
+              </type>
+            </variable>
+            <variable name="str">
+              <type>
+                <string/>
+              </type>
+            </variable>
+            <variable name="cmd">
+              <type>
+                <string/>
+              </type>
+            </variable>
+            <variable name="ack">
+              <type>
+                <BOOL/>
+              </type>
+            </variable>
+            <variable name="ack0">
+              <type>
+                <BOOL/>
+              </type>
+            </variable>
+            <variable name="ack1">
+              <type>
+                <BOOL/>
+              </type>
+            </variable>
+            <variable name="ack2">
+              <type>
+                <BOOL/>
+              </type>
+            </variable>
+            <variable name="is">
+              <type>
+                <BOOL/>
+              </type>
+            </variable>
+          </localVars>
+          <externalVars>
+            <variable name="is_source_turned_on">
+              <type>
+                <BOOL/>
+              </type>
+            </variable>
+            <variable name="first_current">
+              <type>
+                <REAL/>
+              </type>
+            </variable>
+            <variable name="second_current">
+              <type>
+                <REAL/>
+              </type>
+            </variable>
+          </externalVars>
+        </interface>
+        <body>
+          <ST>
+            <xhtml:p><![CDATA[GlobalVar1 := GlobalVar1 + 1;
+
+getCheckBoxState(true,'HMIFrame.checkbox_1.GetValue()',ack,str);
+is := STRING_TO_BOOL(str);
+
+getSpinCtrl(true,'HMIFrame.spin_ctrl_1.GetValue()',ack0,str);
+LocalVar0 := STRING_TO_DINT(str);
+LocalVar0 := ADD(LocalVar0, 1);
+str := CONCAT('HMIFrame.spin_ctrl_1.SetValue(', DINT_TO_STRING(LocalVar0));
+str := CONCAT(str, ')');
+setSpinCtrl(true,str,ack1,str);
+
+(* Get power button status *)
+getSourceValue(true,'HMIFrame.power_btn.GetValue()',ack,str);
+is_source_turned_on := STRING_TO_BOOL(str);
+
+(* Set currents values*)
+cmd := REAL_TO_STRING(first_current);
+cmd := CONCAT('HMIFrame.text_first_current.SetValue("', cmd);
+cmd := CONCAT(cmd, ' A")');
+setFirstCurrent(true,cmd,ack1,str);
+
+cmd := REAL_TO_STRING(second_current);
+cmd := CONCAT('HMIFrame.text_second_current.SetValue("', cmd);
+cmd := CONCAT(cmd, ' A")');
+setSecondCurrent(true,cmd,ack1,str);
+]]></xhtml:p>
+          </ST>
+        </body>
+      </pou>
+      <pou name="main" pouType="program">
+        <interface>
+          <externalVars>
+            <variable name="GlobalVar1">
+              <type>
+                <DINT/>
+              </type>
+            </variable>
+            <variable name="is_source_turned_on">
+              <type>
+                <BOOL/>
+              </type>
+            </variable>
+          </externalVars>
+        </interface>
+        <body>
+          <ST>
+            <xhtml:p><![CDATA[GlobalVar1 := GlobalVar1 + 10;]]></xhtml:p>
+          </ST>
+        </body>
+      </pou>
+      <pou name="simulation" pouType="program">
+        <interface>
+          <externalVars>
+            <variable name="first_temperature">
+              <type>
+                <REAL/>
+              </type>
+            </variable>
+            <variable name="second_temperature">
+              <type>
+                <REAL/>
+              </type>
+            </variable>
+            <variable name="first_current">
+              <type>
+                <REAL/>
+              </type>
+            </variable>
+            <variable name="second_current">
+              <type>
+                <REAL/>
+              </type>
+            </variable>
+            <variable name="is_system_turned_on">
+              <type>
+                <BOOL/>
+              </type>
+            </variable>
+            <variable name="is_source_turned_on">
+              <type>
+                <BOOL/>
+              </type>
+            </variable>
+          </externalVars>
+        </interface>
+        <body>
+          <ST>
+            <xhtml:p><![CDATA[if is_source_turned_on = true then
+  if is_system_turned_on = false then
+    first_current := first_current + INT_TO_REAL(1);
+    second_current := second_current + INT_TO_REAL(2);
+  end_if;
+end_if;]]></xhtml:p>
+          </ST>
+        </body>
+      </pou>
+    </pous>
+  </types>
+  <instances>
+    <configurations>
+      <configuration name="config">
+        <resource name="resource1">
+          <task name="task0" priority="0" interval="T#20ms">
+            <pouInstance name="instance0" typeName="main"/>
+            <pouInstance name="instance1" typeName="hmiUpdater"/>
+            <pouInstance name="instance2" typeName="simulation"/>
+          </task>
+        </resource>
+        <globalVars>
+          <variable name="is_source_turned_on">
+            <type>
+              <BOOL/>
+            </type>
+            <initialValue>
+              <simpleValue value="0"/>
+            </initialValue>
+          </variable>
+        </globalVars>
+      </configuration>
+    </configurations>
+  </instances>
+</project>

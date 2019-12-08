@@ -1,0 +1,54 @@
+<?xml version='1.0' encoding='utf-8'?>
+<PyFile xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <variables>
+    <variable name="LocalVar0" type="DINT" initial="10"/>
+    <variable name="GlobalVar1" type="DINT" initial="10"/>
+    <variable name="is_system_turned_on" type="BOOL" initial="0"/>
+    <variable name="first_temperature" type="REAL" initial="0"/>
+    <variable name="second_temperature" type="REAL" initial="0"/>
+    <variable name="first_current" type="REAL" initial="0"/>
+    <variable name="second_current" type="REAL" initial="0"/>
+  </variables>
+  <globals>
+    <xhtml:p><![CDATA[
+import ctypes
+import wx, sys
+
+class CustomWidget(wx.StaticText):
+    def __init__(self, *args, **kwargs):
+        self.initialized = False
+        super(CustomWidget, self).__init__(*args, **kwargs)
+        self.Message = None
+
+InitBaseHMI = Class_HMIFrame.__init__
+def InitHMI(self,*args,**kargs):
+    InitBaseHMI(self, *args,**kargs)
+    print('Initialisation changed!')
+    try:
+        self.SetSize((200, 200))
+        self.SetTitle("Nex HMI")
+        print(self.power_btn)
+        print(':)')
+    except:
+        print(':(')
+
+Class_HMIFrame.__init__ = InitHMI
+]]></xhtml:p>
+  </globals>
+  <init>
+    <xhtml:p><![CDATA[
+]]></xhtml:p>
+  </init>
+  <cleanup>
+    <xhtml:p><![CDATA[
+]]></xhtml:p>
+  </cleanup>
+  <start>
+    <xhtml:p><![CDATA[
+]]></xhtml:p>
+  </start>
+  <stop>
+    <xhtml:p><![CDATA[
+]]></xhtml:p>
+  </stop>
+</PyFile>
