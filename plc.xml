@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <project xmlns:ns1="http://www.plcopen.org/xml/tc6_0201" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns="http://www.plcopen.org/xml/tc6_0201">
   <fileHeader companyName="Неизвестно" productName="Unnamed" productVersion="1" creationDateTime="2019-12-05T21:38:19"/>
-  <contentHeader name="Unnamed" modificationDateTime="2019-12-09T01:37:56">
+  <contentHeader name="Unnamed" modificationDateTime="2019-12-09T23:08:50">
     <coordinateInfo>
       <fbd>
         <scaling x="0" y="0"/>
@@ -189,16 +189,190 @@
                 <BOOL/>
               </type>
             </variable>
+            <variable name="raw_first_current">
+              <type>
+                <INT/>
+              </type>
+            </variable>
+            <variable name="raw_second_current">
+              <type>
+                <INT/>
+              </type>
+            </variable>
+            <variable name="pwm_first_current">
+              <type>
+                <INT/>
+              </type>
+            </variable>
+            <variable name="pwm_second_current">
+              <type>
+                <INT/>
+              </type>
+            </variable>
+            <variable name="MAX_CURRENT_VALUE">
+              <type>
+                <INT/>
+              </type>
+            </variable>
           </externalVars>
+          <localVars>
+            <variable name="real_temp">
+              <type>
+                <REAL/>
+              </type>
+            </variable>
+          </localVars>
         </interface>
         <body>
           <ST>
             <xhtml:p><![CDATA[if is_source_turned_on = true then
-  if is_system_turned_on = false then
-    first_current := first_current + INT_TO_REAL(1);
-    second_current := second_current + INT_TO_REAL(2);
+  if is_system_turned_on = true then
+    (* Simulate first current *)
+    real_temp := INT_TO_REAL(MAX_CURRENT_VALUE);
+    real_temp := MUL(INT_TO_REAL(pwm_first_current), real_temp);
+    raw_first_current := REAL_TO_INT(DIV(real_temp, 100.0));
+    
+    (* Simulate second current *)
+    real_temp := INT_TO_REAL(MAX_CURRENT_VALUE);
+    real_temp := MUL(INT_TO_REAL(pwm_second_current), real_temp);
+    raw_second_current := REAL_TO_INT(DIV(real_temp, 100.0));
   end_if;
 end_if;]]></xhtml:p>
+          </ST>
+        </body>
+      </pou>
+      <pou name="receive_signals" pouType="program">
+        <interface>
+          <externalVars>
+            <variable name="raw_first_current">
+              <type>
+                <INT/>
+              </type>
+            </variable>
+            <variable name="raw_second_current">
+              <type>
+                <INT/>
+              </type>
+            </variable>
+            <variable name="raw_first_temperature">
+              <type>
+                <INT/>
+              </type>
+            </variable>
+            <variable name="raw_second_temperature">
+              <type>
+                <INT/>
+              </type>
+            </variable>
+            <variable name="is_first_source_turned_on">
+              <type>
+                <BOOL/>
+              </type>
+            </variable>
+            <variable name="is_second_source_turned_on">
+              <type>
+                <BOOL/>
+              </type>
+            </variable>
+            <variable name="is_object_in_first_area">
+              <type>
+                <BOOL/>
+              </type>
+            </variable>
+            <variable name="is_object_between_areas">
+              <type>
+                <BOOL/>
+              </type>
+            </variable>
+            <variable name="is_object_in_second_area">
+              <type>
+                <BOOL/>
+              </type>
+            </variable>
+            <variable name="first_current">
+              <type>
+                <REAL/>
+              </type>
+            </variable>
+            <variable name="second_current">
+              <type>
+                <REAL/>
+              </type>
+            </variable>
+          </externalVars>
+        </interface>
+        <body>
+          <ST>
+            <xhtml:p><![CDATA[first_current := INT_TO_REAL(raw_first_current);
+second_current := INT_TO_REAL(raw_second_current);]]></xhtml:p>
+          </ST>
+        </body>
+      </pou>
+      <pou name="transmite_signals" pouType="program">
+        <interface>
+          <externalVars>
+            <variable name="pwm_first_current">
+              <type>
+                <INT/>
+              </type>
+            </variable>
+            <variable name="pwm_second_current">
+              <type>
+                <INT/>
+              </type>
+            </variable>
+            <variable name="cmd_put_object_in_oven">
+              <type>
+                <BOOL/>
+              </type>
+            </variable>
+            <variable name="cmd_remove_object_from_oven">
+              <type>
+                <BOOL/>
+              </type>
+            </variable>
+            <variable name="cmd_enable_first_source">
+              <type>
+                <BOOL/>
+              </type>
+            </variable>
+            <variable name="cmd_enable_second_source">
+              <type>
+                <BOOL/>
+              </type>
+            </variable>
+            <variable name="desired_first_temperature">
+              <type>
+                <REAL/>
+              </type>
+            </variable>
+            <variable name="desired_second_temperature">
+              <type>
+                <REAL/>
+              </type>
+            </variable>
+            <variable name="MAX_CURRENT_VALUE">
+              <type>
+                <INT/>
+              </type>
+            </variable>
+          </externalVars>
+          <localVars>
+            <variable name="real_temp">
+              <type>
+                <REAL/>
+              </type>
+            </variable>
+          </localVars>
+        </interface>
+        <body>
+          <ST>
+            <xhtml:p><![CDATA[real_temp := DIV(desired_first_temperature, INT_TO_REAL(MAX_CURRENT_VALUE));
+pwm_first_current := REAL_TO_INT(MUL(real_temp, 100.0));
+
+real_temp := DIV(desired_second_temperature, INT_TO_REAL(MAX_CURRENT_VALUE));
+pwm_second_current := REAL_TO_INT(MUL(real_temp, 100.0));
+]]></xhtml:p>
           </ST>
         </body>
       </pou>
@@ -212,8 +386,95 @@ end_if;]]></xhtml:p>
             <pouInstance name="instance0" typeName="main"/>
             <pouInstance name="instance1" typeName="hmiUpdater"/>
             <pouInstance name="instance2" typeName="simulation"/>
+            <pouInstance name="instance3" typeName="receive_signals"/>
+            <pouInstance name="instance4" typeName="transmite_signals"/>
           </task>
         </resource>
+        <globalVars>
+          <variable name="raw_first_current">
+            <type>
+              <INT/>
+            </type>
+          </variable>
+          <variable name="raw_second_current">
+            <type>
+              <INT/>
+            </type>
+          </variable>
+          <variable name="raw_first_temperature">
+            <type>
+              <INT/>
+            </type>
+          </variable>
+          <variable name="raw_second_temperature">
+            <type>
+              <INT/>
+            </type>
+          </variable>
+          <variable name="is_first_source_turned_on">
+            <type>
+              <BOOL/>
+            </type>
+          </variable>
+          <variable name="is_second_source_turned_on">
+            <type>
+              <BOOL/>
+            </type>
+          </variable>
+          <variable name="is_object_in_first_area">
+            <type>
+              <BOOL/>
+            </type>
+          </variable>
+          <variable name="is_object_between_areas">
+            <type>
+              <BOOL/>
+            </type>
+          </variable>
+          <variable name="is_object_in_second_area">
+            <type>
+              <BOOL/>
+            </type>
+          </variable>
+          <variable name="pwm_first_current">
+            <type>
+              <INT/>
+            </type>
+          </variable>
+          <variable name="pwm_second_current">
+            <type>
+              <INT/>
+            </type>
+          </variable>
+          <variable name="cmd_put_object_in_oven">
+            <type>
+              <BOOL/>
+            </type>
+          </variable>
+          <variable name="cmd_remove_object_from_oven">
+            <type>
+              <BOOL/>
+            </type>
+          </variable>
+          <variable name="cmd_enable_first_source">
+            <type>
+              <BOOL/>
+            </type>
+          </variable>
+          <variable name="cmd_enable_second_source">
+            <type>
+              <BOOL/>
+            </type>
+          </variable>
+          <variable name="MAX_CURRENT_VALUE">
+            <type>
+              <INT/>
+            </type>
+            <initialValue>
+              <simpleValue value="3000"/>
+            </initialValue>
+          </variable>
+        </globalVars>
       </configuration>
     </configurations>
   </instances>
