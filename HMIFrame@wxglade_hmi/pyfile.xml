@@ -14,8 +14,8 @@
     <variable name="is_stop_btn_pressed" type="BOOL" initial="0"/>
     <variable name="first_current" type="REAL" initial="0"/>
     <variable name="second_current" type="REAL" initial="0"/>
-    <variable name="first_temperature" type="REAL" initial="0"/>
-    <variable name="second_temperature" type="REAL" initial="0"/>
+    <variable name="first_temperature" type="REAL" initial="24"/>
+    <variable name="second_temperature" type="REAL" initial="24"/>
   </variables>
   <globals>
     <xhtml:p><![CDATA[

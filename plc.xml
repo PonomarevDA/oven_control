@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <project xmlns:ns1="http://www.plcopen.org/xml/tc6_0201" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns="http://www.plcopen.org/xml/tc6_0201">
   <fileHeader companyName="Неизвестно" productName="Unnamed" productVersion="1" creationDateTime="2019-12-05T21:38:19"/>
-  <contentHeader name="Unnamed" modificationDateTime="2019-12-10T18:38:20">
+  <contentHeader name="Unnamed" modificationDateTime="2019-12-10T19:42:58">
     <coordinateInfo>
       <fbd>
         <scaling x="0" y="0"/>
@@ -20,14 +20,15 @@
         <baseType>
           <enum>
             <values>
-              <value name="stopped"/>
+              <value name="inactive"/>
               <value name="started"/>
               <value name="holded"/>
+              <value name="stopped"/>
             </values>
           </enum>
         </baseType>
         <initialValue>
-          <simpleValue value="stopped"/>
+          <simpleValue value="inactive"/>
         </initialValue>
       </dataType>
     </dataTypes>
@@ -163,6 +164,26 @@
                 <BOOL/>
               </type>
             </variable>
+            <variable name="desired_first_temperature">
+              <type>
+                <REAL/>
+              </type>
+            </variable>
+            <variable name="desired_second_temperature">
+              <type>
+                <REAL/>
+              </type>
+            </variable>
+            <variable name="desired_first_holding">
+              <type>
+                <REAL/>
+              </type>
+            </variable>
+            <variable name="desired_second_holding">
+              <type>
+                <REAL/>
+              </type>
+            </variable>
             <variable name="is_start_btn_pressed">
               <type>
                 <BOOL/>
@@ -220,7 +241,22 @@
             </variable>
           </localVars>
           <localVars>
-            <variable name="temp_time">
+            <variable name="FIRST_PERIOD_END_TICKS">
+              <type>
+                <INT/>
+              </type>
+            </variable>
+            <variable name="SECOND_PERIOD_END_TICKS">
+              <type>
+                <INT/>
+              </type>
+            </variable>
+            <variable name="THIRD_PERIOD_END_TICKS">
+              <type>
+                <INT/>
+              </type>
+            </variable>
+            <variable name="empty_filling_time">
               <type>
                 <TIME/>
               </type>
@@ -239,6 +275,39 @@
               </type>
             </variable>
           </localVars>
+          <localVars constant="true">
+            <variable name="K_P">
+              <type>
+                <REAL/>
+              </type>
+              <initialValue>
+                <simpleValue value="0.001"/>
+              </initialValue>
+            </variable>
+            <variable name="K_I">
+              <type>
+                <REAL/>
+              </type>
+              <initialValue>
+                <simpleValue value="0.0001"/>
+              </initialValue>
+            </variable>
+            <variable name="K_D">
+              <type>
+                <REAL/>
+              </type>
+              <initialValue>
+                <simpleValue value="0.001"/>
+              </initialValue>
+            </variable>
+          </localVars>
+          <localVars>
+            <variable name="des_crnt">
+              <type>
+                <REAL/>
+              </type>
+            </variable>
+          </localVars>
         </interface>
         <body>
           <ST>
@@ -253,10 +322,10 @@ if is_source_turned_on = true then
       mode := stopped;
     end_if;
   else
-    mode := stopped;
+    mode := inactive;
   end_if;
 else
-  mode := stopped;
+  mode := inactive;
 end_if;
 is_start_btn_pressed := false;
 is_hold_btn_pressed := false;
@@ -265,23 +334,43 @@ is_stop_btn_pressed := false;
 (* Process timer *)
 if mode = started then
   work_counter := work_counter + 1;
-elsif mode = stopped then
+elsif mode = stopped or mode = inactive then
   work_counter := 0;
 end_if;
 
 (* Calculate desired control parameters in this moment *)
-if work_counter < 5*1000/20 then
-  desired_first_current := DINT_TO_REAL(work_counter) * 100.0 / 250.0;
-  desired_second_current := desired_first_current;
-elsif work_counter < 5*1000/20*2 then
-  first_pid(true, 650.0, first_temperature, 0.0, 0.001, 0.0001, 0.001, temp_time, desired_first_current);
-  second_pid(true, 650.0, second_temperature, 0.0, 0.001, 0.0001, 0.001, temp_time, desired_second_current);
-elsif work_counter < 5*1000/20*4 then
-  first_pid(true, 650.0, first_temperature, 0.0, 0.001, 0.0001, 0.001, temp_time, desired_first_current);
-  second_pid(true, 1050.0, second_temperature, 0.0, 0.001, 0.0001, 0.001, temp_time, desired_second_current);
-else 
-  first_pid(true, 24.0, first_temperature, 0.0, 0.001, 0.0001, 0.001, temp_time, desired_first_current);
-  second_pid(true, 24.0, second_temperature, 0.0, 0.001, 0.0001, 0.001, temp_time, desired_second_current);
+FIRST_PERIOD_END_TICKS := 25*(1000/TASK_PERIOD_MS);
+SECOND_PERIOD_END_TICKS := FIRST_PERIOD_END_TICKS + (REAL_TO_INT(desired_first_holding))*(1000/TASK_PERIOD_MS);
+THIRD_PERIOD_END_TICKS := SECOND_PERIOD_END_TICKS + (REAL_TO_INT(desired_second_holding))*(1000/TASK_PERIOD_MS);
+if mode = started or mode = holded then
+  if work_counter < INT_TO_DINT(FIRST_PERIOD_END_TICKS) then
+    des_crnt := 100.0 * DINT_TO_REAL(work_counter) / INT_TO_REAL(FIRST_PERIOD_END_TICKS);
+    first_pid(true, des_crnt, desired_first_current, 0.0, 
+              K_P, K_I, K_D, empty_filling_time, desired_first_current);
+    second_pid(true, des_crnt, desired_second_current, 0.0,
+               K_P, K_I, K_D, empty_filling_time, desired_second_current);
+  elsif work_counter < INT_TO_DINT(SECOND_PERIOD_END_TICKS) then
+    first_pid(true, desired_first_temperature, first_temperature, 0.0, 
+              K_P, K_I, K_D, empty_filling_time, desired_first_current);
+    second_pid(true, desired_first_temperature, second_temperature, 0.0, 
+              K_P, K_I, K_D, empty_filling_time, desired_second_current);
+  elsif work_counter < INT_TO_DINT(THIRD_PERIOD_END_TICKS) then
+    first_pid(true, desired_first_temperature, first_temperature, 0.0, 
+              K_P, K_I, K_D, empty_filling_time, desired_first_current);
+    second_pid(true, desired_second_temperature, second_temperature, 0.0, 
+               K_P, K_I, K_D, empty_filling_time, desired_second_current);
+  else
+    mode := stopped;
+    first_pid(true, 24.0, first_temperature, 0.0, 
+              K_P, K_I, K_D, empty_filling_time, desired_first_current);
+    second_pid(true, 24.0, second_temperature, 0.0, 
+              K_P, K_I, K_D, empty_filling_time, desired_second_current);
+  end_if;
+elsif mode = stopped then
+  first_pid(true, 24.0, first_temperature, 0.0, 
+            K_P, K_I, K_D, empty_filling_time, desired_first_current);
+  second_pid(true, 24.0, second_temperature, 0.0, 
+             K_P, K_I, K_D, empty_filling_time, desired_second_current);
 end_if;]]></xhtml:p>
           </ST>
         </body>
