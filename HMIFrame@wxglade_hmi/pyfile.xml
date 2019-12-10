@@ -12,6 +12,9 @@
     <variable name="is_start_btn_pressed" type="BOOL" initial="0"/>
     <variable name="is_hold_btn_pressed" type="BOOL" initial="0"/>
     <variable name="is_stop_btn_pressed" type="BOOL" initial="0"/>
+    <variable name="is_object_in_first_area" type="BOOL" initial="1"/>
+    <variable name="is_object_between_areas" type="BOOL" initial="0"/>
+    <variable name="is_object_in_second_area" type="BOOL" initial="0"/>
     <variable name="first_current" type="REAL" initial="0"/>
     <variable name="second_current" type="REAL" initial="0"/>
     <variable name="first_temperature" type="REAL" initial="24"/>
@@ -32,13 +35,13 @@ class CustomWidget(wx.StaticText):
 
 # Buttons events
 is_source_turned_on = False
-def power_btn_handler(event):
+def power_btn_handler(self, event):
     global is_source_turned_on
     is_source_turned_on = not is_source_turned_on
     setattr(PLCGlobals,"is_source_turned_on", is_source_turned_on)
 
 is_system_turned_on = False
-def start_system_btn_handler(event):
+def start_system_btn_handler(self, event):
     global is_system_turned_on
     is_system_turned_on = not is_system_turned_on
     setattr(PLCGlobals,"is_system_turned_on", is_system_turned_on)
@@ -69,22 +72,34 @@ def OnTimer(self, event):
     global counter
     HMIFrame.text_current_time.SetValue(str(float(counter)/10) + " sec")
     counter += 1
+
     # 2. Update displays currents
     text = str(getattr(PLCGlobals,"first_current")) + " A"
     HMIFrame.text_first_current.SetValue(text)
     text = str(getattr(PLCGlobals,"second_current")) + " A"
     HMIFrame.text_second_current.SetValue(text)
+
     # 3. Update displays temperatures
     text = str(getattr(PLCGlobals,"first_temperature")) + " C"
     HMIFrame.text_first_temperature.SetValue(text)
     text = str(getattr(PLCGlobals,"second_temperature")) + " C"
     HMIFrame.text_second_temperature.SetValue(text)
-    # 4. Update control desied temperatures
+
+    # 4. Update displays object position
+    text = getattr(PLCGlobals,"is_object_in_first_area")
+    HMIFrame.checkbox_is_first_area.SetValue(text)
+    text = getattr(PLCGlobals,"is_object_between_areas")
+    HMIFrame.checkbox_is_between_areas.SetValue(text)
+    text = getattr(PLCGlobals,"is_object_in_second_area")
+    HMIFrame.checkbox_is_second_area.SetValue(text)
+
+    # 5. Update control desied temperatures
     text = HMIFrame.spin_first_temperature.GetValue()
     setattr(PLCGlobals,"desired_first_temperature", float(text))
     text = HMIFrame.spin_second_temperature.GetValue()
     setattr(PLCGlobals,"desired_second_temperature", float(text))
-    # 4. Update control desied durations
+
+    # 6. Update control desied durations
     text = HMIFrame.spin_first_area_duration.GetValue()
     setattr(PLCGlobals,"desired_first_holding", float(text))
     text = HMIFrame.spin_second_area_duration.GetValue()
@@ -92,6 +107,8 @@ def OnTimer(self, event):
 
 InitBaseHMI = Class_HMIFrame.__init__
 Class_HMIFrame.OnTimer = OnTimer
+Class_HMIFrame.power_btn_handler = power_btn_handler
+Class_HMIFrame.start_system_btn_handler = start_system_btn_handler
 def InitHMI(self,*args,**kargs):
     InitBaseHMI(self, *args,**kargs)
     print('Initialisation changed!')
@@ -99,8 +116,8 @@ def InitHMI(self,*args,**kargs):
     self.SetTitle("Nex HMI")
 
     print('\Init buttons:')
-    self.Bind(wx.EVT_CHECKBOX, power_btn_handler, self.power_btn)
-    self.Bind(wx.EVT_CHECKBOX, start_system_btn_handler, self.start_system_btn)
+    self.Bind(wx.EVT_CHECKBOX, self.power_btn_handler, self.power_btn)
+    self.Bind(wx.EVT_CHECKBOX, self.start_system_btn_handler, self.start_system_btn)
     self.Bind(wx.EVT_BUTTON, start_btn_handler, self.start_btn)
     self.Bind(wx.EVT_BUTTON, hold_btn_handler, self.hold_btn)
     self.Bind(wx.EVT_BUTTON, stop_btn_handler, self.stop_btn)

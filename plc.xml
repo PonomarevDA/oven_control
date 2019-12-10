@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <project xmlns:ns1="http://www.plcopen.org/xml/tc6_0201" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns="http://www.plcopen.org/xml/tc6_0201">
   <fileHeader companyName="Неизвестно" productName="Unnamed" productVersion="1" creationDateTime="2019-12-05T21:38:19"/>
-  <contentHeader name="Unnamed" modificationDateTime="2019-12-10T19:42:58">
+  <contentHeader name="Unnamed" modificationDateTime="2019-12-11T00:50:10">
     <coordinateInfo>
       <fbd>
         <scaling x="0" y="0"/>
@@ -199,6 +199,21 @@
                 <BOOL/>
               </type>
             </variable>
+            <variable name="is_object_in_first_area">
+              <type>
+                <BOOL/>
+              </type>
+            </variable>
+            <variable name="is_object_between_areas">
+              <type>
+                <BOOL/>
+              </type>
+            </variable>
+            <variable name="is_object_in_second_area">
+              <type>
+                <BOOL/>
+              </type>
+            </variable>
             <variable name="first_temperature">
               <type>
                 <REAL/>
@@ -207,6 +222,11 @@
             <variable name="second_temperature">
               <type>
                 <REAL/>
+              </type>
+            </variable>
+            <variable name="cmd_move_object">
+              <type>
+                <BOOL/>
               </type>
             </variable>
             <variable name="mode">
@@ -230,6 +250,16 @@
               </type>
             </variable>
           </externalVars>
+          <localVars>
+            <variable name="delay_counter">
+              <type>
+                <DINT/>
+              </type>
+              <initialValue>
+                <simpleValue value="0"/>
+              </initialValue>
+            </variable>
+          </localVars>
           <localVars constant="true">
             <variable name="TASK_PERIOD_MS">
               <type>
@@ -256,7 +286,7 @@
                 <INT/>
               </type>
             </variable>
-            <variable name="empty_filling_time">
+            <variable name="dummy_time">
               <type>
                 <TIME/>
               </type>
@@ -264,12 +294,12 @@
                 <simpleValue value="T#0D_0H_0M_0S_1MS"/>
               </initialValue>
             </variable>
-            <variable name="first_pid">
+            <variable name="pid1">
               <type>
                 <derived name="PID"/>
               </type>
             </variable>
-            <variable name="second_pid">
+            <variable name="pid2">
               <type>
                 <derived name="PID"/>
               </type>
@@ -302,7 +332,22 @@
             </variable>
           </localVars>
           <localVars>
-            <variable name="des_crnt">
+            <variable name="des1">
+              <type>
+                <REAL/>
+              </type>
+            </variable>
+            <variable name="des2">
+              <type>
+                <REAL/>
+              </type>
+            </variable>
+            <variable name="now1">
+              <type>
+                <REAL/>
+              </type>
+            </variable>
+            <variable name="now2">
               <type>
                 <REAL/>
               </type>
@@ -311,7 +356,10 @@
         </interface>
         <body>
           <ST>
-            <xhtml:p><![CDATA[(* Define mode: process btn pressing *)
+            <xhtml:p><![CDATA[(* 
+@brief Define mode: process btn pressing
+@note first and second area must be powered to work!
+*)
 if is_source_turned_on = true then
   if is_system_turned_on = true then
     if is_start_btn_pressed = true then
@@ -331,46 +379,72 @@ is_start_btn_pressed := false;
 is_hold_btn_pressed := false;
 is_stop_btn_pressed := false;
 
-(* Process timer *)
+(* 
+@brief Process timer
+@note It uses to define which temperature should be used now1.
+*)
 if mode = started then
   work_counter := work_counter + 1;
 elsif mode = stopped or mode = inactive then
   work_counter := 0;
+  delay_counter := 0;
 end_if;
 
 (* Calculate desired control parameters in this moment *)
-FIRST_PERIOD_END_TICKS := 25*(1000/TASK_PERIOD_MS);
+FIRST_PERIOD_END_TICKS := 10*(1000/TASK_PERIOD_MS) + DINT_TO_INT(delay_counter);
 SECOND_PERIOD_END_TICKS := FIRST_PERIOD_END_TICKS + (REAL_TO_INT(desired_first_holding))*(1000/TASK_PERIOD_MS);
 THIRD_PERIOD_END_TICKS := SECOND_PERIOD_END_TICKS + (REAL_TO_INT(desired_second_holding))*(1000/TASK_PERIOD_MS);
+
+(* 
+@brief Process object moving
+@note Send command to move object and hold process while object is moving
+*)
+if work_counter < INT_TO_DINT(SECOND_PERIOD_END_TICKS) then
+  cmd_move_object := false;
+elsif work_counter = INT_TO_DINT(SECOND_PERIOD_END_TICKS) and is_object_in_first_area = true then
+  cmd_move_object := true;
+elsif work_counter = INT_TO_DINT(SECOND_PERIOD_END_TICKS) and is_object_in_second_area = true then
+  cmd_move_object := false;
+elsif work_counter = INT_TO_DINT(THIRD_PERIOD_END_TICKS) and is_object_in_second_area = true then
+  cmd_move_object := true;
+elsif work_counter = INT_TO_DINT(THIRD_PERIOD_END_TICKS) and is_object_in_second_area = false then
+  cmd_move_object := false;
+end_if;
+
+if cmd_move_object = true then
+  delay_counter := delay_counter + 1;
+end_if;
+
+
+(* 
+@brief Set controlled data (desired first and second currents)
+*)
+now1 := first_temperature;
+now2 := second_temperature;
 if mode = started or mode = holded then
-  if work_counter < INT_TO_DINT(FIRST_PERIOD_END_TICKS) then
-    des_crnt := 100.0 * DINT_TO_REAL(work_counter) / INT_TO_REAL(FIRST_PERIOD_END_TICKS);
-    first_pid(true, des_crnt, desired_first_current, 0.0, 
-              K_P, K_I, K_D, empty_filling_time, desired_first_current);
-    second_pid(true, des_crnt, desired_second_current, 0.0,
-               K_P, K_I, K_D, empty_filling_time, desired_second_current);
-  elsif work_counter < INT_TO_DINT(SECOND_PERIOD_END_TICKS) then
-    first_pid(true, desired_first_temperature, first_temperature, 0.0, 
-              K_P, K_I, K_D, empty_filling_time, desired_first_current);
-    second_pid(true, desired_first_temperature, second_temperature, 0.0, 
-              K_P, K_I, K_D, empty_filling_time, desired_second_current);
-  elsif work_counter < INT_TO_DINT(THIRD_PERIOD_END_TICKS) then
-    first_pid(true, desired_first_temperature, first_temperature, 0.0, 
-              K_P, K_I, K_D, empty_filling_time, desired_first_current);
-    second_pid(true, desired_second_temperature, second_temperature, 0.0, 
-               K_P, K_I, K_D, empty_filling_time, desired_second_current);
+  if work_counter < INT_TO_DINT(FIRST_PERIOD_END_TICKS) and is_object_in_first_area = true then
+    des1 := 100.0 * DINT_TO_REAL(work_counter) / INT_TO_REAL(FIRST_PERIOD_END_TICKS);
+    des2 := des1;
+    now1 := desired_first_current;
+    now2 := desired_second_current;
+  elsif work_counter < INT_TO_DINT(SECOND_PERIOD_END_TICKS) and is_object_in_first_area = true then
+    des1 := desired_first_temperature;
+    des2 := desired_first_temperature;
+  elsif (work_counter >= INT_TO_DINT(SECOND_PERIOD_END_TICKS)) and 
+        (is_object_between_areas = true or is_object_in_first_area = true) then
+    des1 := desired_first_temperature;
+    des2 := desired_first_temperature;
+  elsif work_counter < INT_TO_DINT(THIRD_PERIOD_END_TICKS) and is_object_in_second_area = true then
+    des1 := desired_first_temperature;
+    des2 := desired_second_temperature;
   else
     mode := stopped;
-    first_pid(true, 24.0, first_temperature, 0.0, 
-              K_P, K_I, K_D, empty_filling_time, desired_first_current);
-    second_pid(true, 24.0, second_temperature, 0.0, 
-              K_P, K_I, K_D, empty_filling_time, desired_second_current);
   end_if;
+  pid1(true, des1, now1, 0.0, K_P, K_I, K_D, dummy_time, desired_first_current);
+  pid2(true, des2, now2, 0.0, K_P, K_I, K_D, dummy_time, desired_second_current);
 elsif mode = stopped then
-  first_pid(true, 24.0, first_temperature, 0.0, 
-            K_P, K_I, K_D, empty_filling_time, desired_first_current);
-  second_pid(true, 24.0, second_temperature, 0.0, 
-             K_P, K_I, K_D, empty_filling_time, desired_second_current);
+  pid1(true, 24.0, now1, 0.0, K_P, K_I, K_D, dummy_time, desired_first_current);
+  pid2(true, 24.0, now2, 0.0, K_P, K_I, K_D, dummy_time, desired_second_current);
 end_if;]]></xhtml:p>
           </ST>
         </body>
@@ -388,16 +462,6 @@ end_if;]]></xhtml:p>
                 <BOOL/>
               </type>
             </variable>
-            <variable name="raw_first_temperature">
-              <type>
-                <INT/>
-              </type>
-            </variable>
-            <variable name="raw_second_temperature">
-              <type>
-                <INT/>
-              </type>
-            </variable>
             <variable name="raw_first_current">
               <type>
                 <INT/>
@@ -408,6 +472,31 @@ end_if;]]></xhtml:p>
                 <INT/>
               </type>
             </variable>
+            <variable name="raw_first_temperature">
+              <type>
+                <INT/>
+              </type>
+            </variable>
+            <variable name="raw_second_temperature">
+              <type>
+                <INT/>
+              </type>
+            </variable>
+            <variable name="is_object_in_first_area">
+              <type>
+                <BOOL/>
+              </type>
+            </variable>
+            <variable name="is_object_between_areas">
+              <type>
+                <BOOL/>
+              </type>
+            </variable>
+            <variable name="is_object_in_second_area">
+              <type>
+                <BOOL/>
+              </type>
+            </variable>
             <variable name="pwm_first_current">
               <type>
                 <REAL/>
@@ -416,6 +505,11 @@ end_if;]]></xhtml:p>
             <variable name="pwm_second_current">
               <type>
                 <REAL/>
+              </type>
+            </variable>
+            <variable name="cmd_move_object">
+              <type>
+                <BOOL/>
               </type>
             </variable>
             <variable name="MAX_CURRENT_VALUE">
@@ -448,6 +542,16 @@ end_if;]]></xhtml:p>
               </type>
             </variable>
           </externalVars>
+          <localVars>
+            <variable name="counter">
+              <type>
+                <INT/>
+              </type>
+              <initialValue>
+                <simpleValue value="0"/>
+              </initialValue>
+            </variable>
+          </localVars>
         </interface>
         <body>
           <ST>
@@ -461,7 +565,29 @@ end_if;]]></xhtml:p>
   raw_first_temperature := 24 + REAL_TO_INT(PWM_TO_TEMPERATURE * pwm_first_current);
   raw_second_temperature := 24 + REAL_TO_INT(PWM_TO_TEMPERATURE * pwm_second_current);
   
-  (* 3. Make errors *)
+  (* 3. Simulate object moving *)
+  if cmd_move_object = true then
+    counter := counter + 1;
+    if counter > 275 then
+      if is_object_in_first_area = true then
+        is_object_in_first_area := false;
+        is_object_between_areas := true;
+      elsif is_object_between_areas = true then
+        is_object_between_areas := false;
+        is_object_in_second_area := true;
+      elsif is_object_in_second_area = true then
+        is_object_in_second_area := false;
+        is_object_in_first_area := true;
+      end_if;
+      counter := 0;
+    end_if;
+  else
+    counter := 0;
+  end_if;
+
+  
+  
+  (* 4. Make drift *)
   if mod(work_counter, 2) = 1 then
     raw_first_current := REAL_TO_INT(INT_TO_REAL(raw_first_current) * 1.01);
   elsif mod(work_counter, 3) = 1 then
@@ -555,7 +681,9 @@ second_current := INT_TO_REAL(raw_second_current);
 
 (* 2. Parse temperature data *)
 first_temperature := INT_TO_REAL(raw_first_temperature);
-second_temperature := INT_TO_REAL(raw_second_temperature);]]></xhtml:p>
+second_temperature := INT_TO_REAL(raw_second_temperature);
+
+(* 3. Parse object position *)]]></xhtml:p>
           </ST>
         </body>
       </pou>
@@ -572,12 +700,7 @@ second_temperature := INT_TO_REAL(raw_second_temperature);]]></xhtml:p>
                 <REAL/>
               </type>
             </variable>
-            <variable name="cmd_put_object_in_oven">
-              <type>
-                <BOOL/>
-              </type>
-            </variable>
-            <variable name="cmd_remove_object_from_oven">
+            <variable name="cmd_move_object">
               <type>
                 <BOOL/>
               </type>
@@ -623,6 +746,8 @@ pwm_first_current := real_temp_var * 100.0;
 
 real_temp_var := DIV(desired_second_current, INT_TO_REAL(MAX_CURRENT_VALUE));
 pwm_second_current := real_temp_var * 100.0;
+
+(* Transmit move_object_cmd here*)
 ]]></xhtml:p>
           </ST>
         </body>
@@ -672,21 +797,6 @@ pwm_second_current := real_temp_var * 100.0;
               <BOOL/>
             </type>
           </variable>
-          <variable name="is_object_in_first_area">
-            <type>
-              <BOOL/>
-            </type>
-          </variable>
-          <variable name="is_object_between_areas">
-            <type>
-              <BOOL/>
-            </type>
-          </variable>
-          <variable name="is_object_in_second_area">
-            <type>
-              <BOOL/>
-            </type>
-          </variable>
           <variable name="pwm_first_current">
             <type>
               <REAL/>
@@ -697,15 +807,13 @@ pwm_second_current := real_temp_var * 100.0;
               <REAL/>
             </type>
           </variable>
-          <variable name="cmd_put_object_in_oven">
+          <variable name="cmd_move_object">
             <type>
               <BOOL/>
             </type>
-          </variable>
-          <variable name="cmd_remove_object_from_oven">
-            <type>
-              <BOOL/>
-            </type>
+            <initialValue>
+              <simpleValue value="0"/>
+            </initialValue>
           </variable>
           <variable name="cmd_enable_first_source">
             <type>
