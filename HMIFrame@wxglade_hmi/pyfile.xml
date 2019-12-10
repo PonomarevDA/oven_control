@@ -3,12 +3,18 @@
   <variables>
     <variable name="LocalVar0" type="DINT" initial="10"/>
     <variable name="GlobalVar1" type="DINT" initial="10"/>
+
     <variable name="is_source_turned_on" type="BOOL" initial="0"/>
     <variable name="is_system_turned_on" type="BOOL" initial="0"/>
     <variable name="desired_first_temperature" type="REAL" initial="0"/>
     <variable name="desired_second_temperature" type="REAL" initial="0"/>
     <variable name="desired_first_holding" type="REAL" initial="0"/>
     <variable name="desired_second_holding" type="REAL" initial="0"/>
+
+    <variable name="is_start_btn_pressed" type="BOOL" initial="0"/>
+    <variable name="is_hold_btn_pressed" type="BOOL" initial="0"/>
+    <variable name="is_stop_btn_pressed" type="BOOL" initial="0"/>
+
     <variable name="first_current" type="REAL" initial="0"/>
     <variable name="second_current" type="REAL" initial="0"/>
     <variable name="first_temperature" type="REAL" initial="0"/>
@@ -39,6 +45,24 @@ def start_system_btn_handler(event):
     global is_system_turned_on
     is_system_turned_on = not is_system_turned_on
     setattr(PLCGlobals,"is_system_turned_on", is_system_turned_on)
+
+is_start_btn_pressed = False
+def start_btn_handler(event):
+    global is_start_btn_pressed
+    is_start_btn_pressed = True
+    setattr(PLCGlobals,"is_start_btn_pressed", is_start_btn_pressed)
+
+is_hold_btn_pressed = False
+def hold_btn_handler(event):
+    global is_hold_btn_pressed
+    is_hold_btn_pressed = True
+    setattr(PLCGlobals,"is_hold_btn_pressed", is_hold_btn_pressed)
+
+is_stop_btn_pressed = False
+def stop_btn_handler(event):
+    global is_stop_btn_pressed
+    is_stop_btn_pressed = True
+    setattr(PLCGlobals,"is_stop_btn_pressed", is_stop_btn_pressed)
     
 
 counter = 0
@@ -75,6 +99,9 @@ def InitHMI(self,*args,**kargs):
     print('\Init buttons:')
     self.Bind(wx.EVT_CHECKBOX, power_btn_handler, self.power_btn)
     self.Bind(wx.EVT_CHECKBOX, start_system_btn_handler, self.start_system_btn)
+    self.Bind(wx.EVT_BUTTON, start_btn_handler, self.start_btn)
+    self.Bind(wx.EVT_BUTTON, hold_btn_handler, self.hold_btn)
+    self.Bind(wx.EVT_BUTTON, stop_btn_handler, self.stop_btn)
 
     print('\Init timer:')
     self.timer = wx.Timer(self, TIMER_ID)
