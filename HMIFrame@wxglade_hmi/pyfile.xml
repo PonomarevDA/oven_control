@@ -3,18 +3,15 @@
   <variables>
     <variable name="LocalVar0" type="DINT" initial="10"/>
     <variable name="GlobalVar1" type="DINT" initial="10"/>
-
     <variable name="is_source_turned_on" type="BOOL" initial="0"/>
     <variable name="is_system_turned_on" type="BOOL" initial="0"/>
     <variable name="desired_first_temperature" type="REAL" initial="0"/>
     <variable name="desired_second_temperature" type="REAL" initial="0"/>
     <variable name="desired_first_holding" type="REAL" initial="0"/>
     <variable name="desired_second_holding" type="REAL" initial="0"/>
-
     <variable name="is_start_btn_pressed" type="BOOL" initial="0"/>
     <variable name="is_hold_btn_pressed" type="BOOL" initial="0"/>
     <variable name="is_stop_btn_pressed" type="BOOL" initial="0"/>
-
     <variable name="first_current" type="REAL" initial="0"/>
     <variable name="second_current" type="REAL" initial="0"/>
     <variable name="first_temperature" type="REAL" initial="0"/>
@@ -82,11 +79,16 @@ def OnTimer(self, event):
     HMIFrame.text_first_temperature.SetValue(text)
     text = str(getattr(PLCGlobals,"second_temperature")) + " C"
     HMIFrame.text_second_temperature.SetValue(text)
-    # 4. Update control desied emperatures
+    # 4. Update control desied temperatures
     text = HMIFrame.spin_first_temperature.GetValue()
     setattr(PLCGlobals,"desired_first_temperature", float(text))
     text = HMIFrame.spin_second_temperature.GetValue()
     setattr(PLCGlobals,"desired_second_temperature", float(text))
+    # 4. Update control desied durations
+    text = HMIFrame.spin_first_area_duration.GetValue()
+    setattr(PLCGlobals,"desired_first_holding", float(text))
+    text = HMIFrame.spin_second_area_duration.GetValue()
+    setattr(PLCGlobals,"desired_second_holding", float(text))
 
 InitBaseHMI = Class_HMIFrame.__init__
 Class_HMIFrame.OnTimer = OnTimer
