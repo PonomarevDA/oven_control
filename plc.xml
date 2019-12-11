@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <project xmlns:ns1="http://www.plcopen.org/xml/tc6_0201" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns="http://www.plcopen.org/xml/tc6_0201">
   <fileHeader companyName="Неизвестно" productName="Unnamed" productVersion="1" creationDateTime="2019-12-05T21:38:19"/>
-  <contentHeader name="Unnamed" modificationDateTime="2019-12-11T00:50:10">
+  <contentHeader name="Unnamed" modificationDateTime="2019-12-11T19:39:32">
     <coordinateInfo>
       <fbd>
         <scaling x="0" y="0"/>
@@ -33,124 +33,6 @@
       </dataType>
     </dataTypes>
     <pous>
-      <pou name="hmiUpdater" pouType="program">
-        <interface>
-          <localVars>
-            <variable name="LocalVar0">
-              <type>
-                <DINT/>
-              </type>
-            </variable>
-            <variable name="getSourceValue">
-              <type>
-                <derived name="python_poll"/>
-              </type>
-            </variable>
-            <variable name="getSystemMode">
-              <type>
-                <derived name="python_poll"/>
-              </type>
-            </variable>
-            <variable name="setFirstCurrent">
-              <type>
-                <derived name="python_poll"/>
-              </type>
-            </variable>
-            <variable name="setSecondCurrent">
-              <type>
-                <derived name="python_poll"/>
-              </type>
-            </variable>
-          </localVars>
-          <externalVars>
-            <variable name="GlobalVar1">
-              <type>
-                <DINT/>
-              </type>
-            </variable>
-          </externalVars>
-          <localVars>
-            <variable name="getCheckBoxState">
-              <type>
-                <derived name="python_poll"/>
-              </type>
-            </variable>
-            <variable name="getSpinCtrl">
-              <type>
-                <derived name="python_poll"/>
-              </type>
-            </variable>
-            <variable name="setSpinCtrl">
-              <type>
-                <derived name="python_poll"/>
-              </type>
-            </variable>
-            <variable name="getPower">
-              <type>
-                <DINT/>
-              </type>
-            </variable>
-            <variable name="str">
-              <type>
-                <string/>
-              </type>
-            </variable>
-            <variable name="cmd">
-              <type>
-                <string/>
-              </type>
-            </variable>
-            <variable name="ack">
-              <type>
-                <BOOL/>
-              </type>
-            </variable>
-            <variable name="ack0">
-              <type>
-                <BOOL/>
-              </type>
-            </variable>
-            <variable name="ack1">
-              <type>
-                <BOOL/>
-              </type>
-            </variable>
-            <variable name="ack2">
-              <type>
-                <BOOL/>
-              </type>
-            </variable>
-            <variable name="is">
-              <type>
-                <BOOL/>
-              </type>
-            </variable>
-          </localVars>
-          <externalVars>
-            <variable name="is_source_turned_on">
-              <type>
-                <BOOL/>
-              </type>
-            </variable>
-            <variable name="first_current">
-              <type>
-                <REAL/>
-              </type>
-            </variable>
-            <variable name="second_current">
-              <type>
-                <REAL/>
-              </type>
-            </variable>
-          </externalVars>
-        </interface>
-        <body>
-          <ST>
-            <xhtml:p><![CDATA[GlobalVar1 := GlobalVar1 + 1;
-]]></xhtml:p>
-          </ST>
-        </body>
-      </pou>
       <pou name="main" pouType="program">
         <interface>
           <externalVars>
@@ -358,19 +240,14 @@
           <ST>
             <xhtml:p><![CDATA[(* 
 @brief Define mode: process btn pressing
-@note first and second area must be powered to work!
 *)
-if is_source_turned_on = true then
-  if is_system_turned_on = true then
-    if is_start_btn_pressed = true then
-      mode := started;
-    elsif is_hold_btn_pressed = true then
-      mode := holded;
-    elsif is_stop_btn_pressed = true then
-      mode := stopped;
-    end_if;
-  else
-    mode := inactive;
+if is_source_turned_on = true and is_system_turned_on = true then
+  if is_start_btn_pressed = true then
+    mode := started;
+  elsif is_hold_btn_pressed = true then
+    mode := holded;
+  elsif is_stop_btn_pressed = true then
+    mode := stopped;
   end_if;
 else
   mode := inactive;
@@ -379,9 +256,14 @@ is_start_btn_pressed := false;
 is_hold_btn_pressed := false;
 is_stop_btn_pressed := false;
 
+(* Calculate desired control parameters in this moment *)
+FIRST_PERIOD_END_TICKS := 10*(1000/TASK_PERIOD_MS) + DINT_TO_INT(delay_counter);
+SECOND_PERIOD_END_TICKS := FIRST_PERIOD_END_TICKS + (REAL_TO_INT(desired_first_holding))*(1000/TASK_PERIOD_MS);
+THIRD_PERIOD_END_TICKS := SECOND_PERIOD_END_TICKS + (REAL_TO_INT(desired_second_holding))*(1000/TASK_PERIOD_MS);
+
 (* 
 @brief Process timer
-@note It uses to define which temperature should be used now1.
+@note It uses to define which temperature should be used now.
 *)
 if mode = started then
   work_counter := work_counter + 1;
@@ -389,11 +271,6 @@ elsif mode = stopped or mode = inactive then
   work_counter := 0;
   delay_counter := 0;
 end_if;
-
-(* Calculate desired control parameters in this moment *)
-FIRST_PERIOD_END_TICKS := 10*(1000/TASK_PERIOD_MS) + DINT_TO_INT(delay_counter);
-SECOND_PERIOD_END_TICKS := FIRST_PERIOD_END_TICKS + (REAL_TO_INT(desired_first_holding))*(1000/TASK_PERIOD_MS);
-THIRD_PERIOD_END_TICKS := SECOND_PERIOD_END_TICKS + (REAL_TO_INT(desired_second_holding))*(1000/TASK_PERIOD_MS);
 
 (* 
 @brief Process object moving
@@ -422,21 +299,23 @@ end_if;
 now1 := first_temperature;
 now2 := second_temperature;
 if mode = started or mode = holded then
+  (* 1. From 0 to 100 temperature *)
   if work_counter < INT_TO_DINT(FIRST_PERIOD_END_TICKS) and is_object_in_first_area = true then
-    des1 := 100.0 * DINT_TO_REAL(work_counter) / INT_TO_REAL(FIRST_PERIOD_END_TICKS);
+    des1 := calc_desired_tmp(work_counter, 0, INT_TO_DINT(FIRST_PERIOD_END_TICKS), 24.0, 100.0);
     des2 := des1;
-    now1 := desired_first_current;
-    now2 := desired_second_current;
+  (* 2. From 100 Ampers to first desired current *)
   elsif work_counter < INT_TO_DINT(SECOND_PERIOD_END_TICKS) and is_object_in_first_area = true then
-    des1 := desired_first_temperature;
-    des2 := desired_first_temperature;
+    des1 := calc_desired_tmp(work_counter, INT_TO_DINT(FIRST_PERIOD_END_TICKS), INT_TO_DINT(SECOND_PERIOD_END_TICKS), 100.0, desired_first_temperature);
+    des2 := des1;
+  (* 3. Waiting while object between areas *)
   elsif (work_counter >= INT_TO_DINT(SECOND_PERIOD_END_TICKS)) and 
         (is_object_between_areas = true or is_object_in_first_area = true) then
     des1 := desired_first_temperature;
     des2 := desired_first_temperature;
+  (* 4. From first desired temperature to second *)
   elsif work_counter < INT_TO_DINT(THIRD_PERIOD_END_TICKS) and is_object_in_second_area = true then
     des1 := desired_first_temperature;
-    des2 := desired_second_temperature;
+    des2 := calc_desired_tmp(work_counter, INT_TO_DINT(SECOND_PERIOD_END_TICKS), INT_TO_DINT(THIRD_PERIOD_END_TICKS), desired_first_temperature, desired_second_temperature);
   else
     mode := stopped;
   end_if;
@@ -452,12 +331,17 @@ end_if;]]></xhtml:p>
       <pou name="simulation" pouType="program">
         <interface>
           <externalVars>
+            <variable name="is_source_turned_on">
+              <type>
+                <BOOL/>
+              </type>
+            </variable>
             <variable name="is_system_turned_on">
               <type>
                 <BOOL/>
               </type>
             </variable>
-            <variable name="is_source_turned_on">
+            <variable name="is_reset_btn_pressed">
               <type>
                 <BOOL/>
               </type>
@@ -480,6 +364,16 @@ end_if;]]></xhtml:p>
             <variable name="raw_second_temperature">
               <type>
                 <INT/>
+              </type>
+            </variable>
+            <variable name="is_first_source_turned_on">
+              <type>
+                <BOOL/>
+              </type>
+            </variable>
+            <variable name="is_second_source_turned_on">
+              <type>
+                <BOOL/>
               </type>
             </variable>
             <variable name="is_object_in_first_area">
@@ -585,6 +479,12 @@ end_if;]]></xhtml:p>
     counter := 0;
   end_if;
 
+  if is_reset_btn_pressed = true then
+    is_reset_btn_pressed := false;
+    is_object_in_first_area := true;
+    is_object_between_areas := false;
+    is_object_in_second_area := false;
+  end_if;
   
   
   (* 4. Make drift *)
@@ -752,6 +652,46 @@ pwm_second_current := real_temp_var * 100.0;
           </ST>
         </body>
       </pou>
+      <pou name="calc_desired_tmp" pouType="function">
+        <interface>
+          <returnType>
+            <REAL/>
+          </returnType>
+          <inputVars>
+            <variable name="crnt_time">
+              <type>
+                <DINT/>
+              </type>
+            </variable>
+            <variable name="t1">
+              <type>
+                <DINT/>
+              </type>
+            </variable>
+            <variable name="t2">
+              <type>
+                <DINT/>
+              </type>
+            </variable>
+            <variable name="var1">
+              <type>
+                <REAL/>
+              </type>
+            </variable>
+            <variable name="var2">
+              <type>
+                <REAL/>
+              </type>
+            </variable>
+          </inputVars>
+        </interface>
+        <body>
+          <ST>
+            <xhtml:p><![CDATA[calc_desired_tmp := var1 + (var2 - var1) * DINT_TO_REAL(crnt_time - t1) / DINT_TO_REAL(t2  - t1);
+return;]]></xhtml:p>
+          </ST>
+        </body>
+      </pou>
     </pous>
   </types>
   <instances>
@@ -760,7 +700,6 @@ pwm_second_current := real_temp_var * 100.0;
         <resource name="resource1">
           <task name="task0" priority="0" interval="T#20ms">
             <pouInstance name="instance0" typeName="main"/>
-            <pouInstance name="instance1" typeName="hmiUpdater"/>
             <pouInstance name="instance2" typeName="simulation"/>
             <pouInstance name="instance3" typeName="receive_signals"/>
             <pouInstance name="instance4" typeName="transmite_signals"/>

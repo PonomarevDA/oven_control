@@ -55,6 +55,18 @@ def OnTimer(self, event):
     HMIFrame.text_current_time.SetValue(str(float(counter)/10) + " sec")
     counter += 1
 
+    # Enable and disable objects
+    if self.power_btn.GetValue() and self.start_system_btn.GetValue():
+        self.start_btn.Enable()
+        self.hold_btn.Enable()
+        self.stop_btn.Enable()
+        self.reset_btn.Enable()
+    else:
+        self.start_btn.Disable()
+        self.hold_btn.Disable()
+        self.stop_btn.Disable()
+        self.reset_btn.Disable()
+
     # 2. Update displays currents
     text = str(getattr(PLCGlobals,"first_current")) + " A"
     HMIFrame.text_first_current.SetValue(text)
