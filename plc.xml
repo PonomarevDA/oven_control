@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <project xmlns:ns1="http://www.plcopen.org/xml/tc6_0201" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns="http://www.plcopen.org/xml/tc6_0201">
   <fileHeader companyName="Неизвестно" productName="Unnamed" productVersion="1" creationDateTime="2019-12-05T21:38:19"/>
-  <contentHeader name="Unnamed" modificationDateTime="2019-12-11T19:39:32">
+  <contentHeader name="Unnamed" modificationDateTime="2019-12-12T00:06:29">
     <coordinateInfo>
       <fbd>
         <scaling x="0" y="0"/>
@@ -36,7 +36,32 @@
       <pou name="main" pouType="program">
         <interface>
           <externalVars>
-            <variable name="is_source_turned_on">
+            <variable name="is_first_source_turned_on">
+              <type>
+                <BOOL/>
+              </type>
+            </variable>
+            <variable name="is_second_source_turned_on">
+              <type>
+                <BOOL/>
+              </type>
+            </variable>
+            <variable name="is_object_in_first_area">
+              <type>
+                <BOOL/>
+              </type>
+            </variable>
+            <variable name="is_object_between_areas">
+              <type>
+                <BOOL/>
+              </type>
+            </variable>
+            <variable name="is_object_in_second_area">
+              <type>
+                <BOOL/>
+              </type>
+            </variable>
+            <variable name="cmd_move_object">
               <type>
                 <BOOL/>
               </type>
@@ -81,21 +106,6 @@
                 <BOOL/>
               </type>
             </variable>
-            <variable name="is_object_in_first_area">
-              <type>
-                <BOOL/>
-              </type>
-            </variable>
-            <variable name="is_object_between_areas">
-              <type>
-                <BOOL/>
-              </type>
-            </variable>
-            <variable name="is_object_in_second_area">
-              <type>
-                <BOOL/>
-              </type>
-            </variable>
             <variable name="first_temperature">
               <type>
                 <REAL/>
@@ -104,11 +114,6 @@
             <variable name="second_temperature">
               <type>
                 <REAL/>
-              </type>
-            </variable>
-            <variable name="cmd_move_object">
-              <type>
-                <BOOL/>
               </type>
             </variable>
             <variable name="mode">
@@ -241,7 +246,7 @@
             <xhtml:p><![CDATA[(* 
 @brief Define mode: process btn pressing
 *)
-if is_source_turned_on = true and is_system_turned_on = true then
+if is_first_source_turned_on = true and is_second_source_turned_on = true and is_system_turned_on = true then
   if is_start_btn_pressed = true then
     mode := started;
   elsif is_hold_btn_pressed = true then
@@ -294,25 +299,21 @@ end_if;
 
 
 (* 
-@brief Set controlled data (desired first and second currents)
+@brief Calculate parameters with PID (desired first and second currents)
 *)
 now1 := first_temperature;
 now2 := second_temperature;
 if mode = started or mode = holded then
-  (* 1. From 0 to 100 temperature *)
   if work_counter < INT_TO_DINT(FIRST_PERIOD_END_TICKS) and is_object_in_first_area = true then
     des1 := calc_desired_tmp(work_counter, 0, INT_TO_DINT(FIRST_PERIOD_END_TICKS), 24.0, 100.0);
     des2 := des1;
-  (* 2. From 100 Ampers to first desired current *)
   elsif work_counter < INT_TO_DINT(SECOND_PERIOD_END_TICKS) and is_object_in_first_area = true then
     des1 := calc_desired_tmp(work_counter, INT_TO_DINT(FIRST_PERIOD_END_TICKS), INT_TO_DINT(SECOND_PERIOD_END_TICKS), 100.0, desired_first_temperature);
     des2 := des1;
-  (* 3. Waiting while object between areas *)
   elsif (work_counter >= INT_TO_DINT(SECOND_PERIOD_END_TICKS)) and 
         (is_object_between_areas = true or is_object_in_first_area = true) then
     des1 := desired_first_temperature;
     des2 := desired_first_temperature;
-  (* 4. From first desired temperature to second *)
   elsif work_counter < INT_TO_DINT(THIRD_PERIOD_END_TICKS) and is_object_in_second_area = true then
     des1 := desired_first_temperature;
     des2 := calc_desired_tmp(work_counter, INT_TO_DINT(SECOND_PERIOD_END_TICKS), INT_TO_DINT(THIRD_PERIOD_END_TICKS), desired_first_temperature, desired_second_temperature);
@@ -450,16 +451,20 @@ end_if;]]></xhtml:p>
         <body>
           <ST>
             <xhtml:p><![CDATA[if is_source_turned_on = true then
-  (* 1. Simulate currents *)
+  (* 1. Simulate that sources turned on*)
+  is_first_source_turned_on := true;
+  is_second_source_turned_on := true;
+  
+  (* 2. Simulate currents *)
   real_temp_var := INT_TO_REAL(MAX_CURRENT_VALUE) * 0.01;
   raw_first_current := REAL_TO_INT(pwm_first_current * real_temp_var);
   raw_second_current := REAL_TO_INT(pwm_second_current * real_temp_var);
   
-  (* 2. Simulate temperatures *)
+  (* 3. Simulate temperatures *)
   raw_first_temperature := 24 + REAL_TO_INT(PWM_TO_TEMPERATURE * pwm_first_current);
   raw_second_temperature := 24 + REAL_TO_INT(PWM_TO_TEMPERATURE * pwm_second_current);
   
-  (* 3. Simulate object moving *)
+  (* 4. Simulate object moving *)
   if cmd_move_object = true then
     counter := counter + 1;
     if counter > 275 then
@@ -479,6 +484,7 @@ end_if;]]></xhtml:p>
     counter := 0;
   end_if;
 
+  (* 5. Simulate reset process *)
   if is_reset_btn_pressed = true then
     is_reset_btn_pressed := false;
     is_object_in_first_area := true;
@@ -487,7 +493,7 @@ end_if;]]></xhtml:p>
   end_if;
   
   
-  (* 4. Make drift *)
+  (* 6. Make drift *)
   if mod(work_counter, 2) = 1 then
     raw_first_current := REAL_TO_INT(INT_TO_REAL(raw_first_current) * 1.01);
   elsif mod(work_counter, 3) = 1 then
@@ -499,6 +505,9 @@ end_if;]]></xhtml:p>
   elsif mod(work_counter, 11) = 1 then
     raw_first_current := REAL_TO_INT(INT_TO_REAL(raw_first_current) * 1.04);
   end_if;
+else
+  is_first_source_turned_on := false;
+  is_second_source_turned_on := false;
 end_if;]]></xhtml:p>
           </ST>
         </body>
