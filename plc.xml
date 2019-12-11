@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <project xmlns:ns1="http://www.plcopen.org/xml/tc6_0201" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns="http://www.plcopen.org/xml/tc6_0201">
   <fileHeader companyName="Неизвестно" productName="Unnamed" productVersion="1" creationDateTime="2019-12-05T21:38:19"/>
-  <contentHeader name="Unnamed" modificationDateTime="2019-12-12T01:42:24">
+  <contentHeader name="Unnamed" modificationDateTime="2019-12-12T02:05:28">
     <coordinateInfo>
       <fbd>
         <scaling x="0" y="0"/>
@@ -305,13 +305,9 @@ end_if;
 *)
 if work_counter < INT_TO_DINT(SECOND_PERIOD_END_TICKS) then
   cmd_move_object := false;
-elsif work_counter = INT_TO_DINT(SECOND_PERIOD_END_TICKS) and is_object_in_first_area = true then
+elsif work_counter >= INT_TO_DINT(SECOND_PERIOD_END_TICKS) and is_object_in_first_area = true and mode = started then
   cmd_move_object := true;
-elsif work_counter = INT_TO_DINT(SECOND_PERIOD_END_TICKS) and is_object_in_second_area = true then
-  cmd_move_object := false;
-elsif work_counter = INT_TO_DINT(THIRD_PERIOD_END_TICKS) and is_object_in_second_area = true then
-  cmd_move_object := true;
-elsif work_counter = INT_TO_DINT(THIRD_PERIOD_END_TICKS) and is_object_in_second_area = false then
+elsif work_counter >= INT_TO_DINT(SECOND_PERIOD_END_TICKS) and is_object_in_second_area = true then
   cmd_move_object := false;
 end_if;
 
