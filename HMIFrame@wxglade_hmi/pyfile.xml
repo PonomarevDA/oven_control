@@ -14,6 +14,8 @@
     <variable name="is_object_in_first_area" type="BOOL" initial="1"/>
     <variable name="is_object_between_areas" type="BOOL" initial="0"/>
     <variable name="is_object_in_second_area" type="BOOL" initial="0"/>
+    <variable name="is_power_problem" type="BOOL" initial="0"/>
+    <variable name="is_temperature_problem" type="BOOL" initial="0"/>
     <variable name="first_current" type="REAL" initial="0"/>
     <variable name="second_current" type="REAL" initial="0"/>
     <variable name="first_temperature" type="REAL" initial="24"/>
@@ -45,6 +47,8 @@ def stop_btn_handler(event):
     setattr(PLCGlobals,"is_stop_btn_pressed", True)
 def reset_btn_handler(event):
     setattr(PLCGlobals,"is_reset_btn_pressed", True)
+    setattr(PLCGlobals,"is_power_problem", False)
+    setattr(PLCGlobals,"is_temperature_problem", False)
     
 
 counter = 0
@@ -56,7 +60,7 @@ def OnTimer(self, event):
     counter += 1
 
     # Enable and disable objects
-    if self.power_btn.GetValue() and self.start_system_btn.GetValue():
+    if self.start_system_btn.GetValue():
         self.start_btn.Enable()
         self.hold_btn.Enable()
         self.stop_btn.Enable()
@@ -86,6 +90,10 @@ def OnTimer(self, event):
     HMIFrame.checkbox_is_between_areas.SetValue(text)
     text = getattr(PLCGlobals,"is_object_in_second_area")
     HMIFrame.checkbox_is_second_area.SetValue(text)
+    text = getattr(PLCGlobals,"is_power_problem")
+    HMIFrame.checkbox_power_problem.SetValue(text)
+    text = getattr(PLCGlobals,"is_temperature_problem")
+    HMIFrame.checkbox_temperature_problem.SetValue(text)
 
     # 5. Update control desied temperatures
     text = HMIFrame.spin_first_temperature.GetValue()

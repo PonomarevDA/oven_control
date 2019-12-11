@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <project xmlns:ns1="http://www.plcopen.org/xml/tc6_0201" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns="http://www.plcopen.org/xml/tc6_0201">
   <fileHeader companyName="Неизвестно" productName="Unnamed" productVersion="1" creationDateTime="2019-12-05T21:38:19"/>
-  <contentHeader name="Unnamed" modificationDateTime="2019-12-12T00:06:29">
+  <contentHeader name="Unnamed" modificationDateTime="2019-12-12T01:42:24">
     <coordinateInfo>
       <fbd>
         <scaling x="0" y="0"/>
@@ -57,6 +57,16 @@
               </type>
             </variable>
             <variable name="is_object_in_second_area">
+              <type>
+                <BOOL/>
+              </type>
+            </variable>
+            <variable name="is_power_problem">
+              <type>
+                <BOOL/>
+              </type>
+            </variable>
+            <variable name="is_temperature_problem">
               <type>
                 <BOOL/>
               </type>
@@ -261,6 +271,18 @@ is_start_btn_pressed := false;
 is_hold_btn_pressed := false;
 is_stop_btn_pressed := false;
 
+(* Process errors *)
+if is_system_turned_on = true then
+  if is_first_source_turned_on = false or is_second_source_turned_on = false then
+    is_power_problem := true;
+    mode := holded;
+  end_if;
+  if first_temperature > 1500.0 or second_temperature > 2400.0 then
+    is_temperature_problem := true;
+    mode := holded;
+  end_if;
+end_if;
+
 (* Calculate desired control parameters in this moment *)
 FIRST_PERIOD_END_TICKS := 10*(1000/TASK_PERIOD_MS) + DINT_TO_INT(delay_counter);
 SECOND_PERIOD_END_TICKS := FIRST_PERIOD_END_TICKS + (REAL_TO_INT(desired_first_holding))*(1000/TASK_PERIOD_MS);
@@ -303,7 +325,7 @@ end_if;
 *)
 now1 := first_temperature;
 now2 := second_temperature;
-if mode = started or mode = holded then
+if mode = started then
   if work_counter < INT_TO_DINT(FIRST_PERIOD_END_TICKS) and is_object_in_first_area = true then
     des1 := calc_desired_tmp(work_counter, 0, INT_TO_DINT(FIRST_PERIOD_END_TICKS), 24.0, 100.0);
     des2 := des1;
