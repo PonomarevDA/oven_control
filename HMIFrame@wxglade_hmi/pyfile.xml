@@ -1,8 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <PyFile xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
   <variables>
-    <variable name="LocalVar0" type="DINT" initial="10"/>
-    <variable name="GlobalVar1" type="DINT" initial="10"/>
     <variable name="is_source_turned_on" type="BOOL" initial="0"/>
     <variable name="is_system_turned_on" type="BOOL" initial="0"/>
     <variable name="desired_first_temperature" type="REAL" initial="0"/>
@@ -12,6 +10,7 @@
     <variable name="is_start_btn_pressed" type="BOOL" initial="0"/>
     <variable name="is_hold_btn_pressed" type="BOOL" initial="0"/>
     <variable name="is_stop_btn_pressed" type="BOOL" initial="0"/>
+    <variable name="is_reset_btn_pressed" type="BOOL" initial="0"/>
     <variable name="is_object_in_first_area" type="BOOL" initial="1"/>
     <variable name="is_object_between_areas" type="BOOL" initial="0"/>
     <variable name="is_object_in_second_area" type="BOOL" initial="0"/>
@@ -34,35 +33,18 @@ class CustomWidget(wx.StaticText):
         self.Message = None
 
 # Buttons events
-is_source_turned_on = False
 def power_btn_handler(self, event):
-    global is_source_turned_on
-    is_source_turned_on = not is_source_turned_on
-    setattr(PLCGlobals,"is_source_turned_on", is_source_turned_on)
-
-is_system_turned_on = False
+    setattr(PLCGlobals,"is_source_turned_on", self.power_btn.GetValue())
 def start_system_btn_handler(self, event):
-    global is_system_turned_on
-    is_system_turned_on = not is_system_turned_on
-    setattr(PLCGlobals,"is_system_turned_on", is_system_turned_on)
-
-is_start_btn_pressed = False
+    setattr(PLCGlobals,"is_system_turned_on", self.start_system_btn.GetValue())
 def start_btn_handler(event):
-    global is_start_btn_pressed
-    is_start_btn_pressed = True
-    setattr(PLCGlobals,"is_start_btn_pressed", is_start_btn_pressed)
-
-is_hold_btn_pressed = False
+    setattr(PLCGlobals,"is_start_btn_pressed", True)
 def hold_btn_handler(event):
-    global is_hold_btn_pressed
-    is_hold_btn_pressed = True
-    setattr(PLCGlobals,"is_hold_btn_pressed", is_hold_btn_pressed)
-
-is_stop_btn_pressed = False
+    setattr(PLCGlobals,"is_hold_btn_pressed", True)
 def stop_btn_handler(event):
-    global is_stop_btn_pressed
-    is_stop_btn_pressed = True
-    setattr(PLCGlobals,"is_stop_btn_pressed", is_stop_btn_pressed)
+    setattr(PLCGlobals,"is_stop_btn_pressed", True)
+def reset_btn_handler(event):
+    setattr(PLCGlobals,"is_reset_btn_pressed", True)
     
 
 counter = 0
@@ -121,6 +103,7 @@ def InitHMI(self,*args,**kargs):
     self.Bind(wx.EVT_BUTTON, start_btn_handler, self.start_btn)
     self.Bind(wx.EVT_BUTTON, hold_btn_handler, self.hold_btn)
     self.Bind(wx.EVT_BUTTON, stop_btn_handler, self.stop_btn)
+    self.Bind(wx.EVT_BUTTON, reset_btn_handler, self.reset_btn)
 
     print('\Init timer:')
     self.timer = wx.Timer(self, TIMER_ID)
